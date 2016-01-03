@@ -110,8 +110,8 @@ Please note it has NOT effect on evil text object!")
       (forward-line (1- line-num)))))
 
 (defun evilnc--web-mode-is-comment (&optional pos)
-  "Since `web-mode' remote the API we use, we have to create our own.
-Check whether the code at POS is comment."
+  "Check whether the code at POS is comment.
+`web-mode' removes its API, so create our own."
   (unless pos (setq pos (point)))
   (not (null (or (eq (get-text-property pos 'tag-type) 'comment)
                  (eq (get-text-property pos 'block-token) 'comment)
@@ -354,7 +354,7 @@ Code snippets embedded in Org-mode is identified and right `major-mode' is used.
     rlt))
 
 (defun evilnc--web-mode-do-current-line ()
-  "In web-mode, you have to select the whole before comment or uncomment it."
+  "In web-mode, have to select whole line to comment."
   (let (line-mid-pos
         (b (line-beginning-position))
         (e (line-end-position)))
@@ -371,7 +371,7 @@ DO-COMMENT decides we comment or uncomment."
 
   ;; end will change when you comment line by line
   (let (line-cnt tmp)
-    ;; switch beg end if needed
+    ;; make sure beg <= end
     (when (> beg end)
       (setq tmp beg)
       (setq beg end)
