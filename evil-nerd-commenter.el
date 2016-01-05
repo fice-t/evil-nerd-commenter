@@ -90,6 +90,10 @@
   "If t then invert region comment status line by line.
 Please note it has NOT effect on evil text object!")
 
+(defvar evilnc-comment-both-snippet-html nil
+  "Comment both embedded snippet and HTML tag in templates.
+`web-mode' required.")
+
 (defun evilnc--count-lines (beg end)
   "Assume BEG less than END."
   (let (rlt)
@@ -354,16 +358,43 @@ Code snippets embedded in Org-mode is identified and right `major-mode' is used.
     rlt))
 
 (defun evilnc--web-mode-do-current-line ()
-  "In web-mode, have to select whole line to comment."
+  "In `web-mode', have to select whole line to comment."
   (let (line-mid-pos
+        first-char-is-snippet
         (b (line-beginning-position))
         (e (line-end-position)))
 
     (save-excursion
       (push-mark e t t)
       (goto-char b)
+      (skip-chars-forward "[:space:]" e)
+      (setq b (point)) ; skip prefix space characters
+      (setq first-char-is-snippet (get-text-property (point) 'block-side)))
       (evilnc--warn-on-web-mode (evilnc--web-mode-is-region-comment b e))
-      (web-mode-comment-or-uncomment))))
+      (web-mode-comment-or-uncomment)
+
+      (when (and t (not first-char-is-snippet)) ;; evilnc-comment-both-snippet-html
+        ;; new line beginning/end
+        (setq b (line-beginning-position))
+        (setq e (line-end-position))
+        (message "b=%s e=%s" b e)
+        (save-excursion
+          (let (fired)
+            (goto-char b)
+            (while (< (point) e)
+              (forward-char)
+              (message "prop=%s pos=%s" (get-text-property (point) 'block-side) (point))
+              (if (get-text-property (point) 'block-side)
+                  (when (not fired)
+                    (message "fired")
+                    (save-excursion
+                      (push-mark (1+ (point)) t t)
+                      (goto-char (point))
+                      (web-mode-comment-or-uncomment))
+                    (setq fired t))
+                  (setq fired nil)))
+            )))
+      ))
 
 (defun evilnc--web-mode-comment-or-uncomment (beg end)
   "Comment/uncomment line by line from BEG to END.
