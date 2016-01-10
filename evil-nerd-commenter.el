@@ -359,42 +359,38 @@ Code snippets embedded in Org-mode is identified and right `major-mode' is used.
 
 (defun evilnc--web-mode-do-current-line ()
   "In `web-mode', have to select whole line to comment."
-  (let (line-mid-pos
-        first-char-is-snippet
-        (b (line-beginning-position))
-        (e (line-end-position)))
+  (let (first-char-is-snippet e)
 
     (save-excursion
-      (push-mark e t t)
-      (goto-char b)
-      (skip-chars-forward "[:space:]" e)
-      (setq b (point)) ; skip prefix space characters
+      (goto-char (line-beginning-position))
+      (skip-chars-forward "[:space:]" (line-end-position))
       (setq first-char-is-snippet (get-text-property (point) 'block-side)))
-      (evilnc--warn-on-web-mode (evilnc--web-mode-is-region-comment b e))
-      (web-mode-comment-or-uncomment)
 
-      (when (and t (not first-char-is-snippet)) ;; evilnc-comment-both-snippet-html
-        ;; new line beginning/end
-        (setq b (line-beginning-position))
-        (setq e (line-end-position))
-        (message "b=%s e=%s" b e)
-        (save-excursion
-          (let (fired)
-            (goto-char b)
-            (while (< (point) e)
-              (forward-char)
-              (message "prop=%s pos=%s" (get-text-property (point) 'block-side) (point))
-              (if (get-text-property (point) 'block-side)
-                  (when (not fired)
-                    (message "fired")
-                    (save-excursion
-                      (push-mark (1+ (point)) t t)
-                      (goto-char (point))
-                      (web-mode-comment-or-uncomment))
-                    (setq fired t))
-                  (setq fired nil)))
-            )))
-      ))
+    ;; comment the snippet block
+    (when (and t (not first-char-is-snippet)) ;; evilnc-comment-both-snippet-html
+      (save-excursion
+        (let (fired)
+          (goto-char (line-beginning-position))
+          ;; please note (line-beginning-position) is changing in (while)
+          (while (< (point) (line-end-position))
+            (forward-char)
+            (if (get-text-property (point) 'block-side)
+                (when (not fired)
+                  (save-excursion
+                    (push-mark (1+ (point)) t t)
+                    (goto-char (point))
+                    (web-mode-comment-or-uncomment))
+                  (setq fired t))
+              (setq fired nil))))))
+
+    ;; comment the htm line
+    ;; To comment one line ONLY, you need select a line at first,
+    ;; in order to work around web-mode "feature".
+    (push-mark (setq e (line-end-position)) t t)
+    (goto-char (line-beginning-position))
+    (skip-chars-forward "[:space:]" e)
+    (evilnc--warn-on-web-mode (evilnc--web-mode-is-region-comment (point) e))
+    (web-mode-comment-or-uncomment)))
 
 (defun evilnc--web-mode-comment-or-uncomment (beg end)
   "Comment/uncomment line by line from BEG to END.
